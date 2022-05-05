@@ -1,0 +1,28 @@
+def repoRoot() {
+	return new ByteArrayOutputStream().withStream { os ->
+		exec {
+			workingDir settingsDir
+			commandLine 'git', 'rev-parse', '--show-toplevel'
+			standardOutput = os
+		}
+		os.toString()[0..-2]
+	}
+}
+/**
+  use in settings.gradle
+  apply from: <route to this script>
+  setUp name: <name of project>, deps: [
+	  'domain/projec-name'
+  ]
+ */        
+def setUp = {conf->
+	rootProject.name = conf.name
+	def repoRoot = repoRoot()
+	conf.deps.each{
+		it ->
+		includeBuild "$repoRoot/projects/$it"
+	}
+}
+
+
+ext.setUp = setUp
