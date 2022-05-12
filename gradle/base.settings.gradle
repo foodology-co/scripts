@@ -1,28 +1,39 @@
-def repoRoot() {
-	return new ByteArrayOutputStream().withStream { os ->
-		exec {
-			workingDir settingsDir
-			commandLine 'git', 'rev-parse', '--show-toplevel'
-			standardOutput = os
-		}
-		os.toString()[0..-2]
-	}
+def repoDir(settingsDir) {
+        return new ByteArrayOutputStream().withStream { os ->
+                exec {
+                        workingDir settingsDir
+                        commandLine 'git', 'rev-parse', '--show-toplevel'
+                        standardOutput = os
+                }
+                file(os.toString()[0..-2]).toPath()
+        }
 }
 /**
   use in settings.gradle
   apply from: <route to this script>
   setUp name: <name of project>, deps: [
-	  'domain/projec-name'
+          'domain/projec-name'
   ]
- */        
-def setUp = {conf->
-	rootProject.name = conf.name
-	def repoRoot = repoRoot()
-	conf.deps.each{
-		it ->
-		includeBuild "$repoRoot/projects/$it"
-	}
+ */
+def settingsDir = settingsDir.toPath()
+def repoDir = repoDir(settingsDir)  
+def srcDirName = repoDir.relativize(settingsDir).getName(0) 
+def srcDir = repoDir.resolve(srcDirName)
+
+def setUp = { conf ->
+        def name = srcDir
+                .relativize(settingsDir)
+                .toString()
+                .replaceAll("/",".")
+        println("naming project: $name")
+        rootProject.name = name
+        conf.deps.each{
+                it ->
+                includeBuild "$srcDir/$it"
+        }
 }
 
 
 ext.setUp = setUp
+ext.repoDir = repoDir
+ext.srcDir = srcDir
